@@ -14,7 +14,7 @@ class RoleController extends Controller
      */
     public function index()
     {
-        $roles = Role::with('permissions')->latest()->paginate(10);
+        $roles = Role::with('permissions')->orderBy('created_at', 'asc')->paginate(10);
 
         $permissions = Permission::get()->groupBy('module');
 

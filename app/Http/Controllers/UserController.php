@@ -7,24 +7,21 @@ use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
+use Spatie\Permission\Models\Role as SpatieRole;
 
 class UserController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
         $authUser     = Auth::user();
         $authUserRole = $authUser->roles->first()?->name;
 
-        $userQuery = User::with('roles')->latest();
+        $userQuery = User::with('roles')->orderBy('created_at', 'asc');
 
         if (! in_array($authUserRole, ['super-admin', 'admin', 'editor', 'user'])) {
             abort(403, 'Unauthorized Access Prevented');
         }
 
-        # Admin
         if ($authUserRole === 'admin') {
             $userQuery->whereDoesntHave('roles', function ($q) {
                 $q->where('name', 'super-admin');
@@ -40,21 +37,7 @@ class UserController extends Controller
         }
 
         $users = $userQuery->paginate(10);
-
-        # Roles listing
-        $rolesQuery = Role::query();
-
-        if ($authUserRole === 'super-admin') {
-            $rolesQuery->whereIn('name', ['super-admin', 'admin', 'editor', 'user']);
-        } elseif ($authUserRole === 'admin') {
-            $rolesQuery->whereIn('name', ['admin', 'editor', 'user']);
-        } elseif ($authUserRole === 'editor') {
-            $rolesQuery->whereIn('name', ['editor', 'user']);
-        } else {
-            $rolesQuery->whereIn('name', ['user']);
-        }
-
-        $roles = $rolesQuery->get();
+        $roles = Role::all();
 
         return Inertia::render('users/index', [
             'users' => $users,
@@ -62,17 +45,11 @@ class UserController extends Controller
         ]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
         //
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(UserRequest $request)
     {
         $user = User::create([
@@ -82,49 +59,45 @@ class UserController extends Controller
         ]);
 
         if ($user) {
-            $user->syncRoles($request->roles);
+            $roles = SpatieRole::whereIn('id', $request->roles)->pluck('name');
+            $user->syncRoles($roles);
 
             return redirect()->route('users.index')->with('success', 'User created with roles');
         }
+
         return redirect()->back()->with('error', 'Unable to create User. Please try again!');
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(string $id)
     {
         //
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
+    public function edit(User $user)
     {
-        //
+        return Inertia::render('users/index', [
+            'user' => $user->load('roles'),
+            'roles' => Role::all(),
+            'editing' => true
+        ]);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(UserRequest $request, User $user)
     {
         if ($user) {
             $user->name  = $request->name;
             $user->email = $request->email;
-
             $user->save();
 
-            $user->syncRoles($request->roles);
-            return redirect()->route('users.index')->with('success', 'User created with roles');
+            $roles = SpatieRole::whereIn('id', $request->roles)->pluck('name');
+            $user->syncRoles($roles);
+
+            return redirect()->route('users.index')->with('success', 'User updated with roles');
         }
-        return redirect()->back()->with('error', 'Unable to create User. Please try again!');
+
+        return redirect()->back()->with('error', 'Unable to update User. Please try again!');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(User $user)
     {
         if ($user) {

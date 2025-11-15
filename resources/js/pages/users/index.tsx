@@ -70,14 +70,14 @@ export default function Index({ users }: IndexProps) {
         email: string;
         password: string;
         confirm_password: string;
-        roles: string;
+        roles: string[];
         _method: string;
     }>({
         name: '',
         email: '',
         password: '',
         confirm_password: '',
-        roles: '',
+        roles: [],
         _method: 'POST',
     });
 
@@ -161,7 +161,7 @@ export default function Index({ users }: IndexProps) {
         if (category) {
             Object.entries(category).forEach(([key, value]) => {
                 if (key === 'roles' && Array.isArray(value)) {
-                    setData('roles', value[0]?.name);
+                    setData('roles', value.map((r) => r.id.toString())); // ✅ fix: use r.id not r.name
                 } else {
                     setData(key as keyof typeof data, (value as string | null) ?? '');
                 }
@@ -175,7 +175,6 @@ export default function Index({ users }: IndexProps) {
 
         setModalOpen(true);
     };
-
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Categories" />
@@ -199,7 +198,15 @@ export default function Index({ users }: IndexProps) {
                         open={modalOpen}
                         onOpenChange={handleModalToggle}
                         mode={mode}
-                        extraData={props}
+                        extraData={{
+    roles: props.roles?.map((role) => ({
+        label: role.name,           // visible text
+        value: role.id.toString(),  // value submitted
+        key: role.id.toString(),
+    })),
+    }}
+
+
                     />
                 </div>
 

@@ -15,12 +15,12 @@ export const UsersModalFormConfig = {
     },
     fields: [
         {
-            id: 'full-name',
+            id: 'name',
             key: 'name',
             name: 'name',
-            label: 'Full Name',
+            label: 'Username',
             type: 'text',
-            placeholder: 'Enter full name',
+            placeholder: 'Enter username',
             autocomplete: 'name',
             tabIndex: 1,
         },
@@ -30,7 +30,7 @@ export const UsersModalFormConfig = {
             name: 'email',
             label: 'Email',
             type: 'text',
-            placeholder: 'Enter your email',
+            placeholder: 'Enter email',
             autocomplete: 'email',
             tabIndex: 2,
         },
@@ -40,8 +40,8 @@ export const UsersModalFormConfig = {
             name: 'password',
             label: 'Password',
             type: 'password',
-            placeholder: 'Enter your password',
-            autocomplete: 'password',
+            placeholder: 'Enter password',
+            autocomplete: 'new-password',
             tabIndex: 3,
         },
         {
@@ -50,8 +50,8 @@ export const UsersModalFormConfig = {
             name: 'confirm_password',
             label: 'Confirm Password',
             type: 'password',
-            placeholder: 'Confirm your password',
-            autocomplete: 'confirm_password',
+            placeholder: 'Confirm password',
+            autocomplete: 'new-password',
             tabIndex: 4,
         },
         {
@@ -59,10 +59,19 @@ export const UsersModalFormConfig = {
             key: 'roles',
             name: 'roles',
             label: 'Roles',
-            type: 'single-select',
-            tabIndex: 5,
-            options: []
-        },
+            type: 'checkbox-group',
+            defaultValue: [],
+            options: [], // filled by extraData
+            props: {
+                orientation: 'vertical',
+                optionsKey: 'value',  // ✅ tells the form which key to use for the checkbox value
+                labelKey: 'label',    // ✅ tells the form which key to display as the checkbox label
+                showSelectAll: true,
+            },
+        }
+
+
+
     ],
     buttons: [
         {
@@ -77,7 +86,7 @@ export const UsersModalFormConfig = {
             type: 'submit',
             label: 'Save User',
             variant: 'default',
-            className: 'cursor-pointer'
-        }
-    ]
-}
+            className: 'cursor-pointer',
+        },
+    ],
+};

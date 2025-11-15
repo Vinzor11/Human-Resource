@@ -4,6 +4,16 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { hasPermission } from '@/utils/authorization';
 
+// Helper function with null/undefined protection
+const getNestedValue = (obj: any, path: string): any => {
+  if (!obj) return '';
+  
+  return path.split('.').reduce((acc, key) => {
+    if (acc === null || acc === undefined) return '';
+    return acc[key] !== undefined ? acc[key] : '';
+  }, obj);
+};
+
 interface TableColumn {
     label: string;
     key: string;
@@ -11,6 +21,8 @@ interface TableColumn {
     isAction?: boolean;
     className?: string;
     type?: string;
+    displayKey?: string;
+    defaultValue?: any;
 }
 
 interface ActionConfig {
@@ -19,6 +31,10 @@ interface ActionConfig {
     route: string;
     className: string;
     permission?: string;
+    confirm?: {
+        title: string;
+        message: string;
+    };
 }
 
 interface TableRow {
@@ -30,29 +46,26 @@ interface CustomTableProps {
     actions: ActionConfig[];
     data: TableRow[];
     from: number;
-    onDelete: (route: string) => void;
-    onView: (row: TableRow) => void;
-    onEdit: (row: TableRow) => void;
+    onDelete?: (route: string) => void;
+    onView?: (row: TableRow) => void;
+    onEdit?: (row: TableRow) => void;
     isModal?: boolean;
 }
 
 export const CustomTable = ({ columns, actions, data, from, onDelete, onView, onEdit, isModal }: CustomTableProps) => {
     const { auth } = usePage().props as any;
-    const roles = auth.roles;
     const permissions = auth.permissions;
 
     const renderActionButtons = (row: TableRow) => {
         return (
             <div className="flex justify-center">
                 {actions.map((action, index) => {
-
                     if (action.permission && !hasPermission(permissions, action.permission)) {
                         return null;
                     }
 
                     const IconComponent = LucidIcons[action.icon] as React.ElementType;
 
-                    // View Functionality
                     if (isModal) {
                         if (action.label === 'View') {
                             return (
@@ -62,7 +75,6 @@ export const CustomTable = ({ columns, actions, data, from, onDelete, onView, on
                             );
                         }
 
-                        // Edit Functionality
                         if (action.label === 'Edit') {
                             return (
                                 <Button key={index} className={action.className} onClick={() => onEdit?.(row)}>
@@ -72,10 +84,21 @@ export const CustomTable = ({ columns, actions, data, from, onDelete, onView, on
                         }
                     }
 
-                    // Delete Functionality
                     if (action.label === 'Delete') {
                         return (
-                            <Button key={index} className={action.className} onClick={() => onDelete(route(action.route, row.id))}>
+                            <Button 
+                                key={index} 
+                                className={action.className} 
+                                onClick={() => {
+                                    if (action.confirm) {
+                                        if (confirm(action.confirm.message)) {
+                                            onDelete?.(route(action.route, row.id));
+                                        }
+                                    } else {
+                                        onDelete?.(route(action.route, row.id));
+                                    }
+                                }}
+                            >
                                 <IconComponent size={18} />
                             </Button>
                         );
@@ -91,16 +114,74 @@ export const CustomTable = ({ columns, actions, data, from, onDelete, onView, on
         );
     };
 
+    const renderCellValue = (col: TableColumn, cellValue: any, row: TableRow) => {
+        // Handle null/undefined values
+        if (cellValue === null || cellValue === undefined) {
+            return col.defaultValue || '-';
+        }
+
+        if (col.isImage) {
+            return (
+                <div>
+                    <img 
+                        src={cellValue || ''} 
+                        alt={row.name || 'Image'} 
+                        className="h-16 w-20 rounded-lg object-cover" 
+                        onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                    />
+                </div>
+            );
+        }
+
+        if (col.isAction) {
+            return renderActionButtons(row);
+        }
+
+        if (col.type === 'multi-values') {
+            // Ensure we have an array to work with
+            const itemsArray = Array.isArray(cellValue) ? cellValue : [];
+            
+            if (itemsArray.length === 0) {
+                return col.defaultValue || '-';
+            }
+
+            return (
+                <div className="flex flex-wrap items-center justify-center gap-1">
+                    {itemsArray.map((item: any) => {
+                        if (!item) return null;
+                        
+                        const displayValue = col.displayKey 
+                            ? (item[col.displayKey] || '-')
+                            : item.name || item.label || '-';
+                            
+                        return (
+                            <Badge 
+                                className='bg-indigo-100 text-indigo-700 px-3 py-0.5' 
+                                key={item.id || Math.random()}
+                                variant="outline"
+                            >
+                                {displayValue}
+                            </Badge>
+                        );
+                    })}
+                </div>
+            );
+        }
+
+        return cellValue || col.defaultValue || '-';
+    };
+
     return (
         <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
             <table className="w-full table-auto">
                 <thead>
                     <tr className="bg-gray-700 text-white">
                         <th className="border p-4">#</th>
-
-                        {columns.map((column, index) => (
+                        {columns.map((column) => (
                             <th key={column.key} className={column.className}>
-                                {column.label}{' '}
+                                {column.label}
                             </th>
                         ))}
                     </tr>
@@ -111,33 +192,22 @@ export const CustomTable = ({ columns, actions, data, from, onDelete, onView, on
                         data.map((row, index) => (
                             <tr key={index}>
                                 <td className="border px-4 py-2 text-center">{from + index}</td>
-
-                                {columns.map((col) => (
-                                    <td key={col.key} className={`border px-4 py-2 text-center ${col.className}`}>
-                                        {col.isImage ? (
-                                            <div>
-                                                <img src={row[col.key]} alt={row.name || 'Image'} className="h-16 w-20 rounded-lg object-cover" />
-                                            </div>
-                                        ) : col.isAction ? (
-                                            renderActionButtons(row)
-                                        ) : col.type === 'multi-values' && Array.isArray(row[col.key]) ? (
-                                            <div className="flex flex-wrap items-center justify-center gap-1">
-                                                {row[col.key].map((permission: any) => (
-                                                    <Badge className='bg-indigo-100 text-indigo-700 px-3 py-0.5' key={permission.id} variant="outline">
-                                                        {permission.label || permission.name}
-                                                    </Badge>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            row[col.key]
-                                        )}
-                                    </td>
-                                ))}
+                                {columns.map((col) => {
+                                    const cellValue = getNestedValue(row, col.key);
+                                    return (
+                                        <td 
+                                            key={`${col.key}-${index}`} 
+                                            className={`border px-4 py-2 text-center ${col.className}`}
+                                        >
+                                            {renderCellValue(col, cellValue, row)}
+                                        </td>
+                                    );
+                                })}
                             </tr>
                         ))
                     ) : (
                         <tr>
-                            <td colSpan={7} className="text-md py-4 text-center font-bold text-red-600">
+                            <td colSpan={columns.length + 1} className="text-md py-4 text-center font-bold text-red-600">
                                 No Data Found!
                             </td>
                         </tr>
