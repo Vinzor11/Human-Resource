@@ -87,11 +87,19 @@ If you see "Mixed Content" errors (HTTPS page loading HTTP assets), the code has
 - Trust Railway's proxy headers (TrustProxies middleware)
 - Force HTTPS URLs in production (AppServiceProvider)
 
-After deploying, clear the config cache:
+**The nixpacks.toml now automatically clears and rebuilds cache on each deploy.**
+
+If you still see errors after deployment, manually clear the cache:
 ```bash
 railway run php artisan config:clear
+railway run php artisan route:clear
+railway run php artisan view:clear
 railway run php artisan config:cache
+railway run php artisan route:cache
+railway run php artisan view:cache
 ```
+
+**Important:** Make sure your `APP_URL` in Railway is set to `https://essu-human-resource.up.railway.app` (with HTTPS, not HTTP).
 
 ## 🐛 Troubleshooting
 
