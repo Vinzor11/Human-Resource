@@ -1226,16 +1226,21 @@ export default function CreateEmployee({ employee, departments, positions, facul
     
     // For academic: require faculty selection first
     if (isAcademic) {
-      if (!facultySelected) {
+      if (!facultySelected || !data.faculty_id) {
         return []; // No departments available until faculty is selected
       }
       // Filter by organization type and selected faculties
       const selectedFacultyId = Number(data.faculty_id);
+      if (isNaN(selectedFacultyId)) {
+        return [];
+      }
+      
       return allDepartments.filter((dept: any) => {
         const deptType = dept.type || 'academic';
+        const deptFacultyId = dept.faculty_id ? Number(dept.faculty_id) : null;
         return deptType === 'academic' && 
-               dept.faculty_id && 
-               Number(dept.faculty_id) === selectedFacultyId;
+               deptFacultyId !== null && 
+               deptFacultyId === selectedFacultyId;
       });
     }
     

@@ -301,14 +301,27 @@ class EmployeeController extends Controller
         ]);
 
         try {
-            $data = $importer->extract($validated['pds_file']);
+            // Store the file temporarily to ensure it's accessible
+            $file = $validated['pds_file'];
+            $tempPath = $file->store('temp/cs-form-212', 'local');
+            $fullPath = storage_path('app/' . $tempPath);
+            
+            try {
+                $data = $importer->extract($fullPath);
+            } finally {
+                // Clean up the temporary file
+                if (file_exists($fullPath)) {
+                    unlink($fullPath);
+                }
+            }
         } catch (\Throwable $exception) {
             Log::error('Failed to import CS Form 212', [
                 'file_name' => $request->file('pds_file')?->getClientOriginalName(),
                 'error' => $exception->getMessage(),
+                'trace' => $exception->getTraceAsString(),
             ]);
 
-            return back()->with('error', 'Unable to read the CS Form 212 file. Please ensure it follows the configured template.');
+            return back()->with('error', 'Unable to read the CS Form 212 file. Please ensure it follows the configured template. Error: ' . $exception->getMessage());
         }
 
         return back()
@@ -370,7 +383,8 @@ class EmployeeController extends Controller
     {
         $manageableDeptIds = $this->scopeService->getManageableDepartmentIds($user);
         
-        $query = Department::select('id', 'faculty_name', 'faculty_code', 'type', 'faculty_id')
+        // Select all necessary fields including name (which maps to faculty_name via accessor)
+        $query = Department::select('id', 'faculty_name', 'faculty_code', 'type', 'faculty_id', 'code')
             ->orderBy('faculty_name');
         
         // null means no restrictions (super admin/admin) - return all
@@ -386,7 +400,13 @@ class EmployeeController extends Controller
             return collect();
         }
         
-        return $query->get();
+        $departments = $query->get();
+        
+        // Ensure name field is available (maps to faculty_name)
+        return $departments->map(function ($dept) {
+            $dept->name = $dept->faculty_name ?? $dept->name;
+            return $dept;
+        });
     }
 
     /**

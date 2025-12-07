@@ -62,25 +62,41 @@ class CsForm212Importer
 
     private function loadSheets(UploadedFile|string $file): array
     {
-        $path = $file instanceof UploadedFile ? $file->getRealPath() : $file;
+        // Handle both UploadedFile and string paths
+        if ($file instanceof UploadedFile) {
+            // For UploadedFile, use the real path or store temporarily
+            $path = $file->getRealPath();
+            
+            // If getRealPath() returns false or file doesn't exist, store it temporarily
+            if (!$path || !file_exists($path)) {
+                $tempPath = $file->store('temp/cs-form-212', 'local');
+                $path = storage_path('app/' . $tempPath);
+            }
+        } else {
+            $path = $file;
+        }
 
         if (!$path || !file_exists($path)) {
-            throw new RuntimeException('Unable to read the uploaded CS Form 212 file.');
+            throw new RuntimeException('Unable to read the uploaded CS Form 212 file. File path: ' . ($path ?? 'null'));
         }
 
-        $spreadsheet = IOFactory::load($path);
-        $sheets = [];
+        try {
+            $spreadsheet = IOFactory::load($path);
+            $sheets = [];
 
-        foreach ($spreadsheet->getWorksheetIterator() as $worksheet) {
-            $rows = $worksheet->toArray(null, true, true, true);
-            $sheets[$worksheet->getTitle()] = $this->indexSheet($rows);
+            foreach ($spreadsheet->getWorksheetIterator() as $worksheet) {
+                $rows = $worksheet->toArray(null, true, true, true);
+                $sheets[$worksheet->getTitle()] = $this->indexSheet($rows);
+            }
+
+            if (empty($sheets)) {
+                throw new RuntimeException('The uploaded CS Form 212 file does not contain any readable sheets.');
+            }
+
+            return $sheets;
+        } catch (\PhpOffice\PhpSpreadsheet\Reader\Exception $e) {
+            throw new RuntimeException('Failed to read the Excel file. Please ensure it is a valid .xlsx or .xls file. Error: ' . $e->getMessage());
         }
-
-        if (empty($sheets)) {
-            throw new RuntimeException('The uploaded CS Form 212 file does not contain any readable sheets.');
-        }
-
-        return $sheets;
     }
 
     private function indexSheet(array $rows): array
