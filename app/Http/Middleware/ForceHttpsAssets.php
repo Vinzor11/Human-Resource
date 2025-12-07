@@ -18,21 +18,29 @@ class ForceHttpsAssets
         $response = $next($request);
 
         // Only in production
-        if (config('app.env') === 'production' && $request->isSecure()) {
-            // Replace HTTP asset URLs with HTTPS
+        if (config('app.env') === 'production') {
             $content = $response->getContent();
             
             if ($content) {
                 $appUrl = config('app.url');
                 $httpUrl = str_replace('https://', 'http://', $appUrl);
+                $domain = parse_url($appUrl, PHP_URL_HOST);
                 
-                // Replace HTTP URLs with HTTPS for assets
+                // Replace all HTTP URLs with HTTPS for this domain
+                // This handles assets, API endpoints, and any other URLs
                 $content = str_replace($httpUrl, $appUrl, $content);
                 
-                // Also replace any http:// URLs in build/assets paths
+                // Also replace any http:// URLs for this domain (more comprehensive)
                 $content = preg_replace(
-                    '/http:\/\/([^"\']*build\/assets\/[^"\']*)/i',
+                    '/http:\/\/([^\/]*' . preg_quote($domain, '/') . '[^"\']*)/i',
                     'https://$1',
+                    $content
+                );
+                
+                // Replace in JSON strings (for Inertia/Ziggy)
+                $content = preg_replace(
+                    '/"http:\/\/([^\/]*' . preg_quote($domain, '/') . '[^"]*)"/i',
+                    '"https://$1"',
                     $content
                 );
                 

@@ -74,10 +74,26 @@ class HandleInertiaRequests extends Middleware
                 'roles'       => $roles,
                 'permissions' => $permissions,
             ],
-            'ziggy' => fn(): array=> [
-                 ...(new Ziggy)->toArray(),
-                'location' => $request->url(),
-            ],
+            'ziggy' => function () use ($request): array {
+                $ziggy = new Ziggy();
+                $ziggyArray = $ziggy->toArray();
+                
+                // Ensure all Ziggy URLs use HTTPS in production
+                if (config('app.env') === 'production') {
+                    $appUrl = config('app.url');
+                    $httpUrl = str_replace('https://', 'http://', $appUrl);
+                    
+                    // Convert Ziggy routes array to JSON and back to replace HTTP with HTTPS
+                    $ziggyJson = json_encode($ziggyArray);
+                    $ziggyJson = str_replace($httpUrl, $appUrl, $ziggyJson);
+                    $ziggyArray = json_decode($ziggyJson, true);
+                }
+                
+                return [
+                    ...$ziggyArray,
+                    'location' => str_replace('http://', 'https://', $request->url()),
+                ];
+            },
             'flash' => [
                 'success' => $request->session()->get('success'),
                 'error'   => $request->session()->get('error'),
