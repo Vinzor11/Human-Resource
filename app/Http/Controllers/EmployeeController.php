@@ -383,8 +383,8 @@ class EmployeeController extends Controller
     {
         $manageableDeptIds = $this->scopeService->getManageableDepartmentIds($user);
         
-        // Select all necessary fields including name (which maps to faculty_name via accessor)
-        $query = Department::select('id', 'faculty_name', 'faculty_code', 'type', 'faculty_id', 'code')
+        // Select all necessary fields - name and code are appended via accessors
+        $query = Department::select('id', 'faculty_name', 'faculty_code', 'type', 'faculty_id')
             ->orderBy('faculty_name');
         
         // null means no restrictions (super admin/admin) - return all
@@ -400,13 +400,7 @@ class EmployeeController extends Controller
             return collect();
         }
         
-        $departments = $query->get();
-        
-        // Ensure name field is available (maps to faculty_name)
-        return $departments->map(function ($dept) {
-            $dept->name = $dept->faculty_name ?? $dept->name;
-            return $dept;
-        });
+        return $query->get();
     }
 
     /**
