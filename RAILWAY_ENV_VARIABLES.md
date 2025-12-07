@@ -10,6 +10,7 @@ APP_ENV="production"
 APP_KEY="base64:ZWa8FZIdyXxgMnFPpfqckhwOpym0ghqDQsJuPMf4F5w="
 APP_DEBUG="false"
 APP_URL="https://essu-human-resource.up.railway.app"
+ASSET_URL="https://essu-human-resource.up.railway.app"
 DB_CONNECTION="mysql"
 DB_HOST="mysql.railway.internal"
 DB_PORT="3306"
@@ -99,7 +100,11 @@ railway run php artisan route:cache
 railway run php artisan view:cache
 ```
 
-**Important:** Make sure your `APP_URL` in Railway is set to `https://essu-human-resource.up.railway.app` (with HTTPS, not HTTP).
+**Important:** 
+1. Make sure your `APP_URL` in Railway is set to `https://essu-human-resource.up.railway.app` (with HTTPS, not HTTP).
+2. **Add `ASSET_URL` variable** in Railway set to the same HTTPS URL: `https://essu-human-resource.up.railway.app`
+   - This ensures Vite assets are generated with HTTPS URLs
+   - Go to Railway Dashboard → Variables → Add `ASSET_URL` with value `https://essu-human-resource.up.railway.app`
 
 ## 🐛 Troubleshooting
 
