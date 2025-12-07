@@ -81,6 +81,18 @@ After migrations run successfully, you may also need to:
    railway run php artisan db:seed --force
    ```
 
+## 🔒 Fixing Mixed Content (HTTPS) Errors
+
+If you see "Mixed Content" errors (HTTPS page loading HTTP assets), the code has been updated to:
+- Trust Railway's proxy headers (TrustProxies middleware)
+- Force HTTPS URLs in production (AppServiceProvider)
+
+After deploying, clear the config cache:
+```bash
+railway run php artisan config:clear
+railway run php artisan config:cache
+```
+
 ## 🐛 Troubleshooting
 
 If you still get a 500 error after running migrations:

@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Models\RequestSubmission;
 use App\Observers\LeaveRequestObserver;
 use App\Observers\CertificateGenerationObserver;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Passport\Passport;
 
@@ -23,6 +24,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Force HTTPS in production
+        if (config('app.env') === 'production') {
+            URL::forceScheme('https');
+        }
+
         // Register Leave Request Observer
         RequestSubmission::observe(LeaveRequestObserver::class);
         
